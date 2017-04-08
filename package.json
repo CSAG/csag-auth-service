@@ -1,7 +1,7 @@
 {
-  "name": "in-memory-todo",
+  "name": Csag-auth-Service,
   "version": "0.1.0",
-  "description": "An In memory todo for Logged in and not Logged in users",
+  "description": csagauthenauthenandauthen,
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

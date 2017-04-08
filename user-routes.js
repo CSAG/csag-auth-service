@@ -2,87 +2,99 @@ var express = require('express'),
     _       = require('lodash'),
     config  = require('./config'),
     jwt     = require('jsonwebtoken');
+var mysql = require('mysql');
+var passwordHash = require('password-hash');
+
+var connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'root',
+    database: 'csag',
+    //multipleStatement: true
+});
+
+connection.connect();
+
+
+
 
 var app = module.exports = express.Router();
 
-// XXX: This should be a database of users :).
-var users = [{
-  id: 1,
-  username: 'gonto',
-  password: 'gonto'
-}];
 
 function createToken(user) {
   return jwt.sign(_.omit(user, 'password'), config.secret, { expiresIn: 60*60*5 });
 }
 
-function getUserScheme(req) {
-  
-  var username;
-  var type;
-  var userSearch = {};
 
-  // The POST contains a username and not an email
-  if(req.body.username) {
-    username = req.body.username;
-    type = 'username';
-    userSearch = { username: username };
-  }
-  // The POST contains an email and not an username
-  else if(req.body.email) {
-    username = req.body.email;
-    type = 'email';
-    userSearch = { email: username };
+
+app.post('/register', function(req, res) {
+
+  //Validate request
+  if (!req.body.username || !req.body.password || !req.body.fullname || !req.body.age) {
+    return res.status(400).send("You must send the username, fullname, age and password");
   }
 
-  return {
-    username: username,
-    type: type,
-    userSearch: userSearch
-  }
-}
+  //Check if already exists
+  let statement = 'select * from user where username=' + JSON.stringify(req.body.username) + ' LIMIT 1';
+  let query = connection.query(statement, function(err, result) {
+    if (result[0] != null) {
+      return res.status(400).send("A user with that username already exists");
+    }
 
-app.post('/users', function(req, res) {
-  
-  var userScheme = getUserScheme(req);  
+    //insert into db
+    let hashedPwd = passwordHash.generate(req.body.password);
+    let statement = 'insert into user (username, password) values (\"' + req.body.username + '\", \"' + hashedPwd + '\");'
+    let query = connection.query(statement, function(err, result) {
+      if(err){
+        console.log("error to insert")
+      }
+    });
 
-  if (!userScheme.username || !req.body.password) {
-    return res.status(400).send("You must send the username and the password");
-  }
+    res.status(201).send({
+      success: true,
+      data: {
+        username: req.body.username,
+        fullname: req.body.fullname,
+        age: req.body.age,
+        id_token: createToken({"author": "babyjazz naja\'"}),
+      }
+    });
 
-  if (_.find(users, userScheme.userSearch)) {
-   return res.status(400).send("A user with that username already exists");
-  }
-
-  var profile = _.pick(req.body, userScheme.type, 'password', 'extra');
-  profile.id = _.max(users, 'id').id + 1;
-
-  users.push(profile);
-
-  res.status(201).send({
-    id_token: createToken(profile)
   });
 });
 
-app.post('/sessions/create', function(req, res) {
 
-  var userScheme = getUserScheme(req);
+app.post('/login', function(req, res) {
 
-  if (!userScheme.username || !req.body.password) {
-    return res.status(400).send("You must send the username and the password");
-  }
+  let statement = 'select * from user where username=' + JSON.stringify(req.body.username) + ' LIMIT 1';
+  var query = connection.query(statement, function(err, result) {
 
-  var user = _.find(users, userScheme.userSearch);
-  
-  if (!user) {
-    return res.status(401).send("The username or password don't match");
-  }
+    //validate req
+    if (!req.body.username) {
+      return res.status(400).send("You must send the username");
+    }else if(!req.body.password){
+      return res.status(400).send("You must send the password");
+    }
 
-  if (user.password !== req.body.password) {
-    return res.status(401).send("The username or password don't match");
-  }
+    //if found username in database
+    if (result[0] == null) {
+      return res.status(401).send("The username or password don't match");
+    }
 
-  res.status(201).send({
-    id_token: createToken(user)
+    //if password match
+    if (!passwordHash.verify(req.body.password, result[0].password)) {
+      return res.status(401).send("The username or password don't match");
+    }
+
+    res.status(201).send({
+      success: true,
+      data: {
+        username: result[0].username,
+        fullname: result[0].fullname,
+        age: result[0].age,
+        id_token: createToken({"author": "babyjazz naja\'"}),
+      }
+    });
+
   });
 });
