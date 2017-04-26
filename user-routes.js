@@ -5,7 +5,7 @@ var express = require('express'),
 var passwordHash = require('password-hash');
 var pg = require('pg');
 var path = require('path');
-var connectionString = process.env.DATABASE_URL || 'postgres://postgres:123456@localhost:5432/csagauth';
+var connectionString = process.env.DATABASE_URL || 'postgres://'+config.user+':'+config.pass+'@localhost:5432/'+config.database;
 var connection = new pg.Client(connectionString);
 connection.connect();
 
@@ -76,7 +76,7 @@ app.post('/login', function (req, res) {
 
         //if found username in database
         if (result.rowCount == 0) {
-            return res.status(401).send("The username don't match");
+            return res.status(401).send("The email don't match");
         }
         //if password match
         if (!passwordHash.verify(req.body.password, result.rows[0].password.trim())) {

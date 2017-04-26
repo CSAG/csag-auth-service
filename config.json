@@ -1,3 +1,6 @@
 {
-  "secret": "ngEurope rocks!"
+  "secret": "ngEurope rocks!",
+  "user": "postgres",
+  "pass": "123456",
+  "database": "csagauth"
 }
