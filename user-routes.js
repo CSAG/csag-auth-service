@@ -37,7 +37,10 @@ app.post('/register', function (req, res) {
     let statement = "select * from public.user where email='" + req.body.email + "'";
     let query = connection.query(statement, function (err, result) {
         if (result.rowCount != 0) {
-            return res.status(400).send("A user with that email already exists");
+            return res.status(400).send({
+                success: false,
+                code : "EMAIL_IS_ALREADY"
+            });
         }
 
         //insert into db
@@ -69,18 +72,30 @@ app.post('/login', function (req, res) {
 
         //validate req
         if (!req.body.email) {
-            return res.status(400).send("You must send the email");
+            return res.status(400).send({
+                success : false,
+                code : "EMAIL_NOT_SEND"
+            });
         } else if (!req.body.password) {
-            return res.status(400).send("You must send the password");
+            return res.status(400).send({
+                success : false,
+                code : "PASSWORD_NOT_SEND"
+            });
         }
 
         //if found username in database
         if (result.rowCount == 0) {
-            return res.status(401).send("The email don't match");
+            return res.status(401).send({
+                success : false,
+                code : "EMAIL_NOT_FOUND"
+            });
         }
         //if password match
         if (!passwordHash.verify(req.body.password, result.rows[0].password.trim())) {
-            return res.status(401).send("The  password don't match");
+            return res.status(401).send({
+                success : false,
+                code : "PASSWORD_NOT_MATCH"
+            });
         }
 
         res.status(201).send({
